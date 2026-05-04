@@ -1,0 +1,20 @@
+# PeerAuthentication : politique mTLS au niveau du namespace.
+#
+# Étape 1 du palier 18/20 = mode PERMISSIVE :
+#   - les pods en mesh communiquent automatiquement en mTLS via leurs sidecars Envoy
+#   - les clients SANS sidecar (pods hors mesh, ou trafic externe) restent acceptés en clair
+#   - permet de basculer progressivement sans casser les clients legacy
+#
+# Étape 2 = mode STRICT (édition future de ce fichier) :
+#   - tout trafic non-mTLS est refusé
+#   - aligné sur https://istio.io/latest/docs/tasks/security/authentication/mtls-migration/
+#
+# Pattern aligné sur charroux/rentalservice (qui démarre en PERMISSIVE).
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default-mtls
+  namespace: default
+spec:
+  mtls:
+    mode: STRICT
