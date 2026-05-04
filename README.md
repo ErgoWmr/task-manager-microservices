@@ -241,12 +241,12 @@ kubectl exec "$PG" -- psql -U taskmanager -d taskmanagerdb -c '\dt'
 
 ## Notes de conception
 
-- **DB partagée** entre les 2 services (1 base `taskmanagerdb`, 2 tables) — choix conforme aux schémas du PDF du sujet, qui montrent une seule "Service base de données".
+- **DB partagée** entre les 2 services (1 base `taskmanagerdb`, 2 tables) — un seul service de données pour les deux microservices, comme prévu par l'architecture cible du projet.
 - **Validation locale en H2 avant K8s** — comme conseillé par le prof ("Dans un premier temps réaliser le codage d'utilisation d'une base de données via une base in memory"). Le datasource est paramétrable par variables d'environnement (`SPRING_DATASOURCE_*`), donc même image en local (H2 par défaut) ou en K8s (override Postgres).
 - **Image base** : `postgres:16-alpine` au lieu de `postgres:10.1` du repo `charroux/noops/postgres` — la 10.1 est EOL depuis nov 2022. Pattern de manifests strictement identique.
 - **Seed idempotent** : `users-service` catch `DataIntegrityViolationException` au seed pour gérer la race entre 2 replicas qui démarrent en parallèle.
 - **Inter-service** : `tasks-service` appelle `http://users-service:8080` via le DNS K8s du Service. Le RestClient est configuré au démarrage (`@Bean` dans `TasksServiceApplication`).
-- **mTLS migration** (palier 18, [doc Istio](https://istio.io/latest/docs/tasks/security/authentication/mtls-migration/) citée par le PDF) : on a démarré en `PERMISSIVE` (pattern `charroux/rentalservice`), validé que le mesh chiffrait déjà, puis basculé en `STRICT`. Démontré avec un pod hors mesh (namespace `nomesh`) qui passait en PERMISSIVE et est refusé en STRICT.
+- **mTLS migration** (palier 18, suivant la procédure officielle [Istio mTLS migration](https://istio.io/latest/docs/tasks/security/authentication/mtls-migration/)) : on a démarré en `PERMISSIVE` (pattern `charroux/rentalservice`), validé que le mesh chiffrait déjà, puis basculé en `STRICT`. Démontré avec un pod hors mesh (namespace `nomesh`) qui passait en PERMISSIVE et est refusé en STRICT.
 - **Ports nommés sur les Services** : Istio impose une convention de nommage (`http`, `tcp-postgres`, etc.) pour identifier le protocole et router correctement le trafic via les sidecars.
 - **Zero-trust** : combinaison RBAC K8s (limite l'API K8s) + AuthorizationPolicy Istio (limite le trafic mesh). Frontend ne peut pas appeler users-service en direct, tasks-service ne peut pas écrire dans Postgres si pas autorisé, etc.
 

@@ -28,3 +28,6 @@ Thumbs.db
 *.log
 .env
 .env.local
+
+# Notes perso (pas de livrable)
+docs/captures-a-prendre.md
