@@ -1,7 +1,7 @@
 # Projet Docker / Kubernetes — Mini rapport
 
 **Auteurs (binôme)** : Younes OUAMAR & Max PENSO (Master M2 MIAGE GR2)
-**Date** : 2026-05-04
+**Date** : 2026-06-02
 **Repo GitHub** : https://github.com/ErgoWmr/task-manager-microservices
 **Images Docker Hub** :
 - https://hub.docker.com/r/ergowmr/users-service
