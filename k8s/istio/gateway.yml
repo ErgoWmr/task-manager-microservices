@@ -1,0 +1,17 @@
+# Istio Gateway publique : remplace l'Ingress NGINX du palier 12/20.
+# Le sélecteur 'istio: ingressgateway' désigne le pod ingressgateway installé par istioctl.
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: taskmanager-gateway
+  namespace: default
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "taskmanager.local"

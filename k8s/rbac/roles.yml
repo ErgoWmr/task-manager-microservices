@@ -1,0 +1,98 @@
+# Roles minimaux (principe du moindre privilège).
+#
+# Aucun de nos services Spring Boot n'utilise réellement l'API Kubernetes —
+# ils n'ont besoin d'AUCUN droit. Mais on définit quand même un Role par service
+# pour démontrer la structure RBAC, et on le scope au strict nécessaire :
+#
+# - users-service / tasks-service : peuvent lire LEUR propre ConfigMap (config app)
+#   et leur Secret (au cas où on en ajoute pour les credentials DB),
+#   ET lire les pods du namespace (utile pour /actuator/health type self-discovery).
+# - frontend : aucun droit API (juste un ConfigMap au besoin).
+# - postgres : aucun droit API.
+#
+# Tout ce qui n'est pas listé est REFUSÉ par défaut (RBAC est deny-by-default).
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: backend-minimal
+  namespace: default
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+    # Limité aux configmaps app + postgres (utile si on les lit)
+    resourceNames: ["postgres-config"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: frontend-minimal
+  namespace: default
+rules: []  # vide volontairement : le front nginx n'a aucun besoin d'API K8s
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: postgres-minimal
+  namespace: default
+rules: []  # vide : postgres tourne sans interaction K8s
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: users-service-binding
+  namespace: default
+subjects:
+  - kind: ServiceAccount
+    name: users-service-sa
+    namespace: default
+roleRef:
+  kind: Role
+  name: backend-minimal
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tasks-service-binding
+  namespace: default
+subjects:
+  - kind: ServiceAccount
+    name: tasks-service-sa
+    namespace: default
+roleRef:
+  kind: Role
+  name: backend-minimal
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: frontend-binding
+  namespace: default
+subjects:
+  - kind: ServiceAccount
+    name: frontend-sa
+    namespace: default
+roleRef:
+  kind: Role
+  name: frontend-minimal
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: postgres-binding
+  namespace: default
+subjects:
+  - kind: ServiceAccount
+    name: postgres-sa
+    namespace: default
+roleRef:
+  kind: Role
+  name: postgres-minimal
+  apiGroup: rbac.authorization.k8s.io

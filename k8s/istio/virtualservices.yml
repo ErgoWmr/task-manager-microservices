@@ -1,0 +1,58 @@
+# VirtualServices : routent le trafic entrant via la Gateway vers les bons services.
+# Pattern aligné sur charroux/rentalservice (uri.prefix + rewrite + timeouts/retries).
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: taskmanager-vs
+  namespace: default
+spec:
+  hosts:
+    - "taskmanager.local"
+  gateways:
+    - taskmanager-gateway
+  http:
+    # /api/users(/...) → users-service:8080/users(/...)
+    - match:
+        - uri:
+            prefix: /api/users
+      rewrite:
+        uri: /users
+      route:
+        - destination:
+            host: users-service
+            port:
+              number: 8080
+      timeout: 10s
+      retries:
+        attempts: 3
+        perTryTimeout: 3s
+        retryOn: 5xx,reset,connect-failure,refused-stream
+
+    # /api/tasks(/...) → tasks-service:8080/tasks(/...)
+    - match:
+        - uri:
+            prefix: /api/tasks
+      rewrite:
+        uri: /tasks
+      route:
+        - destination:
+            host: tasks-service
+            port:
+              number: 8080
+      timeout: 10s
+      retries:
+        attempts: 3
+        perTryTimeout: 3s
+        retryOn: 5xx,reset,connect-failure,refused-stream
+
+    # / (catch-all) → frontend
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: frontend
+            port:
+              number: 80
+      timeout: 10s

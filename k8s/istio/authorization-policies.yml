@@ -1,0 +1,81 @@
+# AuthorizationPolicy : qui peut appeler qui au niveau du trafic réseau.
+# Complémentaire au RBAC K8s (qui régit l'accès à l'API K8s).
+#
+# Identité L7 = SPIFFE ID dans le cert mTLS du sidecar :
+#   spiffe://cluster.local/ns/<namespace>/sa/<serviceaccount>
+#
+# Politique zero-trust : DENY par défaut sur les workloads protégés,
+# puis ALLOW explicite pour les sources légitimes.
+#
+# Matrice :
+#   - users-service : appelé par istio-ingressgateway (SPA → /api/users) + tasks-service (/full)
+#   - tasks-service : appelé par istio-ingressgateway (SPA → /api/tasks)
+#   - frontend     : appelé par istio-ingressgateway (le browser arrive via la gateway)
+#   - postgres     : appelé par users-service-sa et tasks-service-sa (TCP 5432)
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: users-service-allow
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: users-service
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"
+              - "cluster.local/ns/default/sa/tasks-service-sa"
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: tasks-service-allow
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: tasks-service
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"
+              - "cluster.local/ns/default/sa/frontend-sa"
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: frontend-allow
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: frontend
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: postgres-allow
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: postgres
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/default/sa/users-service-sa"
+              - "cluster.local/ns/default/sa/tasks-service-sa"
